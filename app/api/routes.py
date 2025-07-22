@@ -139,7 +139,7 @@ async def scrape_from_file(
         }
 
 
-@router.post("/analyze")
+@router.post("/")
 async def analyze_complete_pipeline(
     file: UploadFile = File(..., description="Question file (question.txt)")
 ):
