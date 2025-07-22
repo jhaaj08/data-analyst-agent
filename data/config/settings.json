@@ -1,0 +1,11 @@
+{
+  "max_file_size_mb": 100,
+  "supported_formats": ["csv", "json", "html", "txt"],
+  "default_timeout": 30,
+  "cache_enabled": true,
+  "allowed_domains": [
+    "wikipedia.org",
+    "github.com",
+    "raw.githubusercontent.com"
+  ]
+}

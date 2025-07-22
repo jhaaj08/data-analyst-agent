@@ -65,3 +65,10 @@ tmp/
 *.jpg
 *.pdf
 rank_vs_peak.png
+# Project specific data folder rules
+data/uploads/*
+data/outputs/*
+!data/uploads/.gitkeep
+!data/outputs/.gitkeep
+!data/config/
+!data/samples/
