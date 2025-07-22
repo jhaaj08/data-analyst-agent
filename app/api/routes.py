@@ -182,23 +182,19 @@ async def analyze_complete_pipeline(
             clean_result = {k: v for k, v in result.items() if k != 'dataframe'}
             clean_results.append(clean_result)
         
-        return {
-            "success": True,
-            "message": f"Complete pipeline: {len(answers)} answers generated",
-            "parsed": {
-                "data_sources": data_sources,
-                "questions": questions
-            },
-            "scraped": clean_results,
-            "answers": answers
-        }
+        # 🎯 EXTRACT JUST THE ANSWER VALUES AS A SIMPLE LIST
+        simple_answers = []
+        for answer_dict in answers:
+            if answer_dict.get('success', False):
+                simple_answers.append(answer_dict.get('answer', 'No answer'))
+            else:
+                simple_answers.append(f"Error: {answer_dict.get('error', 'Failed')}")
+        
+        return simple_answers  # ✅ Return simple list instead of complex dict
         
     except Exception as e:
         print(f"❌ Complete pipeline failed: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return [f"Pipeline Error: {str(e)}"]  # ✅ Return error as simple list too
 
 
 @router.get("/health")
