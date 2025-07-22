@@ -200,6 +200,7 @@ async def analyze_complete_pipeline(
             "error": str(e)
         }
 
+
 @router.get("/health")
 async def health_check():
     """Health check"""
