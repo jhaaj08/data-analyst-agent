@@ -3,6 +3,7 @@ Simple FastAPI route for parsing questions into data sources and questions lists
 """
 from fastapi import APIRouter, File, UploadFile
 from typing import Dict, Any, List
+from ..utils.s3_util import S3_Util
 import json
 import re
 import sys
@@ -22,6 +23,7 @@ except ImportError as e:
 
 # Add the parent directory to path to import scrapping module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from app.utils import s3_util
 from scrapping import scrape_data_sources
 
 from app.core.llm_client import LLMClient
@@ -216,13 +218,15 @@ async def _parse_with_llm(question_text: str) -> Dict[str, Any]:
     {question_text}
     
     Return JSON with:
-    1. data_sources: Array of URLs or data sources found
-    2. questions: Array of individual questions/tasks to answer
-    3. format_requirements: Any output format requirements (JSON array, base64, etc.)
+    1. data_sources: Array of URLs  or data sources found.if data_sources has s3 bucket path , return bucket name and prefix separated by colon. prefix should be till the point without regex.
+    2. s3_paths : if data_sources has s3 bucket path , return bucket name and prefix separated by colon. prefix should be till the point without regex.
+    3. questions: Array of individual questions/tasks to answer
+    4. format_requirements: Any output format requirements (JSON array, base64, etc.)
     
     Example:
     {{
         "data_sources": ["https://example.com/data.csv"],
+        "s3_paths": ["bucket_name:prefix"],
         "questions": ["How many records?", "What is the average?"],
         "format_requirements": "JSON array response"
     }}
@@ -294,8 +298,19 @@ def _extract_data_sources(parsed_data: Dict[str, Any]) -> List[str]:
     Extract clean list of data source URLs
     """
     sources = parsed_data.get("data_sources", [])
-    if isinstance(sources, str):
-        sources = [sources]
+    s3_paths = parsed_data.get("s3_paths",[])
+
+    
+    if not s3_paths:
+        if isinstance(sources, str):
+            sources = [sources]
+    else:
+        sources = []
+        s3Util = S3_Util()
+        for s3_path in s3_paths:
+            path_var = s3_path.split(":",1)
+            sources.extend(s3Util.get_s3_file_list(path_var[0],path_var[1]))
+
     
     # Remove empty strings and duplicates
     clean_sources = []

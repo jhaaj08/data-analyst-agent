@@ -99,6 +99,8 @@ class DataScraper:
                 return self._scrape_csv(url)
             elif '.json' in url:
                 return self._scrape_json(url)
+            elif 's3' in url:
+                return 
             else:
                 # Default: try HTML tables first, then CSV
                 df = self._scrape_html_tables(url)
@@ -109,6 +111,12 @@ class DataScraper:
         except Exception as e:
             print(f"⚠️  Scraping error: {e}")
             return None
+
+
+    def _scrape_files_from_s3(self,url : str) -> Optional[pd.DataFrame] :
+        """
+        Scrape files from s3 path 
+        """        
     
     def _scrape_html_tables(self, url: str) -> Optional[pd.DataFrame]:
         """
