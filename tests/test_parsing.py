@@ -150,3 +150,4 @@ class TestQuestionParsing:
         assert result["data_source"] is None
         assert result["requires_web_scraping"] is False
         assert result["output_format"]["type"] == "standard" 
+        
