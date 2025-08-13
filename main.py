@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.api.routes import router
 
+        
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application"""

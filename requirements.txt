@@ -12,6 +12,9 @@ attrs==25.3.0
 babel==2.17.0
 beautifulsoup4==4.13.4
 bleach==6.2.0
+boto==2.7.0
+boto3==1.28.30
+botocore==1.31.30
 cachetools==5.5.2
 certifi==2025.7.14
 cffi==1.17.1
@@ -115,6 +118,7 @@ psutil==7.0.0
 psycopg2-binary==2.9.10
 ptyprocess==0.7.0
 pure_eval==0.2.3
+pyarrow==19.0.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22

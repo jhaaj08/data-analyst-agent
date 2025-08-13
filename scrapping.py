@@ -6,6 +6,9 @@ import pandas as pd
 import requests
 from typing import List, Dict, Any, Optional
 import time
+import io
+
+from app.utils import s3_util 
 
 
 class DataScraper:
@@ -99,6 +102,8 @@ class DataScraper:
                 return self._scrape_csv(url)
             elif '.json' in url:
                 return self._scrape_json(url)
+            elif 's3' or ":" in url:
+                return  self._scrape_files_from_s3(url)
             else:
                 # Default: try HTML tables first, then CSV
                 df = self._scrape_html_tables(url)
@@ -109,7 +114,27 @@ class DataScraper:
         except Exception as e:
             print(f"⚠️  Scraping error: {e}")
             return None
+
+
+    def _scrape_files_from_s3(self,url : str) -> Optional[pd.DataFrame] :
+        s3_path = url.split(":",1)
+        s3_file = s3_util.S3_Util().get_s3_file(s3_path[0],s3_path[1])
+        return self._scrape_parquet_bytes(s3_file)
+        
+        """
+        Scrape files from s3 path 
+        """        
     
+    def _scrape_parquet_bytes(self, bytes : io.BytesIO) -> Optional[pd.DataFrame]:
+        """
+        Scrape parquet data from bytes
+        """
+        try:
+            df = pd.read_parquet(bytes)
+            return df
+        except Exception as e:
+            print(f"❌ parquet scraping failed: {e}")
+            return None
     def _scrape_html_tables(self, url: str) -> Optional[pd.DataFrame]:
         """
         Scrape HTML tables from URL (especially Wikipedia)
