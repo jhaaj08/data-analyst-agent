@@ -8,6 +8,9 @@ import json
 import re
 import sys
 import os
+import tiktoken
+import asyncio
+
 
 # Add root directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -102,13 +105,14 @@ async def scrape_from_file(
         # Extract data sources and questions
         data_sources = _extract_data_sources(parsed_data)
         questions = _extract_questions(parsed_data)
+        applicable_sources = await _extract_applicable_sources(questions,data_sources)
         
-        print(f"🔍 Found {len(data_sources)} data sources, {len(questions)} questions")
+        print(f"🔍 Found {len(applicable_sources)} data sources, {len(questions)} questions")
         
         # Step 2: Scrape the data sources
         if data_sources:
             print(f"📡 Scraping {len(data_sources)} data sources...")
-            scrape_results = scrape_data_sources(data_sources)
+            scrape_results = scrape_data_sources(applicable_sources)
             
             # Remove the actual DataFrame from results (too large for JSON)
             clean_results = []
@@ -159,13 +163,14 @@ async def analyze_complete_pipeline(
         parsed_data = await _parse_with_llm(question_text)
         data_sources = _extract_data_sources(parsed_data)
         questions = _extract_questions(parsed_data)
-        print(f"✅ Found {len(data_sources)} sources, {len(questions)} questions")
+        applicable_sources = await _extract_applicable_sources(questions,data_sources)
+        print(f"✅ Found {len(applicable_sources)} sources, {len(questions)} questions")
         
         # Step 2: Scrape
         scrape_results = []
         if data_sources:
             print(f"📡 STEP 2: Scraping...")
-            scrape_results = scrape_data_sources(data_sources)
+            scrape_results = scrape_data_sources(applicable_sources)
             print(f"✅ Scraped {len(scrape_results)} sources")
         
         # Step 3: Answer Questions
@@ -265,6 +270,60 @@ async def _parse_with_llm(question_text: str) -> Dict[str, Any]:
     return _parse_with_regex(question_text)
 
 
+
+async def _parse_valid_sources(question_text: str,data_source : str) -> Dict[str, Any]:
+    """
+    Use LLM to parse question text into structured data
+    """
+    
+    prompt = f"""
+    filter valid sources from data_source which can help answer question_text:
+    
+    REQUEST:
+    {question_text,data_source}
+    
+    Return JSON with:
+    1. valid_source : return data source 
+
+    
+    Example:
+    {{
+        "valid_source": ["data source"],
+    }}
+    
+    Respond only with valid JSON.
+    """
+    
+    # Try OpenAI
+    if llm_client.openai_client:
+        try:
+            print("🤖 Using OpenAI...")
+            response = llm_client.openai_client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
+            result = json.loads(response.choices[0].message.content)
+            result["_parser"] = "openai"
+            return result
+        except Exception as e:
+            return {"valid_source" : []}
+    
+
+    return {"valid_source" : []}
+    
+    # Try Gemini fallback
+    # if llm_client.gemini_client:
+    #     try:
+    #         print("🤖 Using Gemini...")
+    #         response = llm_client.gemini_client.generate_content(prompt)
+    #         result = json.loads(response.text)
+    #         result["_parser"] = "gemini"
+    #         return result
+    #     except Exception as e:
+    #         print(f"❌ Gemini failed: {e}")
+
+
 def _parse_with_regex(question_text: str) -> Dict[str, Any]:
     """
     Fallback regex parsing
@@ -336,3 +395,43 @@ def _extract_questions(parsed_data: Dict[str, Any]) -> List[str]:
             clean_questions.append(question.strip())
     
     return clean_questions
+
+
+async def _extract_applicable_sources(questions : List[str],data_sources: List[str]) -> List[str]:
+    num_of_sources = len(data_sources)
+    if num_of_sources  < 10 :
+       return data_sources
+
+    filtered_source = []
+    filtered_sources = []
+    applicable_sources = []
+    for index,source in enumerate(data_sources):
+       num_of_tokens =  num_tokens_from_string(",".join(filtered_source))
+       if num_of_tokens < 3000:
+            filtered_source.append(source)
+       elif num_of_tokens >= 3000 or  index == num_of_sources-1 :
+            filtered_sources.append(filtered_source)
+            filtered_source =[] 
+
+    tasks = [_parse_valid_sources(questions,fs) for fs in filtered_sources]
+    results = await asyncio.gather(*tasks)
+
+    for i, result in enumerate(results):
+         applicable_sources.extend(result.get("valid_source", []))
+    
+
+    print(f"parsing complete with {len(applicable_sources)}")
+    return applicable_sources
+
+    
+
+
+
+
+
+
+def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
+        """Returns the number of tokens in a text string."""
+        encoding = tiktoken.get_encoding(encoding_name)
+        num_tokens = len(encoding.encode(string))
+        return num_tokens

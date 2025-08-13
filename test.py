@@ -6,6 +6,7 @@ import re
 import pandas as pd 
 import io 
 import time 
+import duckdb
 
 
 
@@ -36,22 +37,38 @@ def list_parquet_files(bucket_name, prefix):
     for page in pages:
         if 'Contents' in page:
             for obj in page['Contents']:
-                if ".parquet" in obj['Key']:
-                    matching_keys.append(obj['Key'])
+                matching_keys.append(obj['Key'])
+                # if ".parquet" in obj['Key']:
+                #     matching_keys.append(obj['Key'])
     
     dfs = []
     start_time = time.time()
-    print("started adding parquet to dataframes")
-    i = 0 
-    tot = len(matching_keys)
-    print(f"total objects to add {tot}")
-    for obj in matching_keys:
-        data = s3_client.get_object(Bucket=bucket_name,Key=obj)
-        buffer = io.BytesIO(data['Body'].read())
-        df = pd.read_parquet(buffer)
-        dfs.append(df)
-        i+=1
-        print(f"added {i} object")
+    data = s3_client.get_object(Bucket=bucket_name,Key=matching_keys[0])
+    buffer = io.BytesIO(data['Body'].read())
+    df = pd.read_parquet(buffer)
+    duckdb.sql("CREATE TABLE my_table AS SELECT * FROM df")
+    db_data = duckdb.sql("select * from my_table")
+    data = s3_client.get_object(Bucket=bucket_name,Key=matching_keys[1])
+    buffer = io.BytesIO(data['Body'].read())
+    df = pd.read_parquet(buffer)
+    duckdb.sql("INSERT INTO my_table SELECT * FROM df")
+    db_data = duckdb.sql("select * from my_table")
+
+
+
+
+
+    # print("started adding parquet to dataframes")
+    # i = 0 
+    # tot = len(matching_keys)
+    # print(f"total objects to add {tot}")
+    # for obj in matching_keys:
+    #     data = s3_client.get_object(Bucket=bucket_name,Key=obj)
+    #     buffer = io.BytesIO(data['Body'].read())
+    #     df = pd.read_parquet(buffer)
+    #     dfs.append(df)
+    #     i+=1
+    #     print(f"added {i} object")
     
     end_time = time.time()
     first_execution_time = end_time - start_time
@@ -63,9 +80,6 @@ def list_parquet_files(bucket_name, prefix):
         
 
     
-
-
-    return parquet_files
 
 def test_boto3() :
        bucket = "indian-high-court-judgments"
