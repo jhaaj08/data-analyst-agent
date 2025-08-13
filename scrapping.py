@@ -7,6 +7,8 @@ import requests
 from typing import List, Dict, Any, Optional
 import time
 import io
+from io import BytesIO
+
 
 from app.utils import s3_util 
 
@@ -22,7 +24,7 @@ class DataScraper:
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         })
     
-    def scrape_sources(self, data_sources: List[str]) -> List[Dict[str, Any]]:
+    def scrape_sources(self, data_sources: List[str],attachments : Dict[str,bytes] = {}) -> List[Dict[str, Any]]:
         """
         Scrape multiple data sources and return DataFrames info
         
@@ -43,7 +45,7 @@ class DataScraper:
                 start_time = time.time()
                 
                 # Scrape the URL
-                df = self._scrape_single_url(url)
+                df = self._scrape_single_url(url,attachments)
                 
                 scrape_time = time.time() - start_time
                 
@@ -90,7 +92,7 @@ class DataScraper:
         
         return results
     
-    def _scrape_single_url(self, url: str) -> Optional[pd.DataFrame]:
+    def _scrape_single_url(self, url: str,attachments : Dict[str,bytes] = {}) -> Optional[pd.DataFrame]:
         """
         Scrape a single URL and return DataFrame
         """
@@ -99,7 +101,7 @@ class DataScraper:
             if 'wikipedia.org' in url or '.html' in url:
                 return self._scrape_html_tables(url)
             elif '.csv' in url:
-                return self._scrape_csv(url)
+                return self._scrape_csv(attachments[url])
             elif '.json' in url:
                 return self._scrape_json(url)
             elif 's3' or ":" in url:
@@ -201,13 +203,13 @@ class DataScraper:
         print("📋 No perfect match, using largest table")
         return max(tables, key=len)
     
-    def _scrape_csv(self, url: str) -> Optional[pd.DataFrame]:
+    def _scrape_csv(self, csv_bytes_data : bytes) -> Optional[pd.DataFrame]:
         """
         Scrape CSV data from URL
         """
         try:
-            print(f"📄 Reading CSV from: {url}")
-            df = pd.read_csv(url)
+            bytes_io_object = BytesIO(csv_bytes_data)
+            df = pd.read_csv(bytes_io_object)
             return df
         except Exception as e:
             print(f"❌ CSV scraping failed: {e}")
@@ -237,7 +239,7 @@ class DataScraper:
 
 
 # Simple function interface
-def scrape_data_sources(data_sources: List[str]) -> List[Dict[str, Any]]:
+def scrape_data_sources(data_sources: List[str],attachments : Dict[str,bytes] = {}) -> List[Dict[str, Any]]:
     """
     Simple function to scrape data sources
     
@@ -248,7 +250,7 @@ def scrape_data_sources(data_sources: List[str]) -> List[Dict[str, Any]]:
         List of dictionaries with scraping results
     """
     scraper = DataScraper()
-    return scraper.scrape_sources(data_sources)
+    return scraper.scrape_sources(data_sources,attachments)
 
 
 # Test function
