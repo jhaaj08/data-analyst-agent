@@ -160,6 +160,7 @@ starlette==0.47.1
 tenacity==9.1.2
 terminado==0.18.1
 threadpoolctl==3.6.0
+tiktoken
 tinycss2==1.4.0
 tornado==6.5.1
 tqdm==4.67.1
