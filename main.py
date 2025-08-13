@@ -6,13 +6,38 @@ A Python-based data analyst agent API for automated data analysis tasks.
 """
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI,Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.api.routes import router
+import time 
+import logging
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+class RequestLoggerMiddleware(BaseHTTPMiddleware):
+        async def set_body(self,request: Request, body: bytes):
+            async def receive():
+                return {"type": "http.request", "body": body}
+            request._receive = receive
+        async def dispatch(self, request: Request, call_next):
+            start_time = time.time()
+            # Log request details
+            body  = await request.body()
+            logger.info(f"raw request body : {body.decode()}")
+            await self.set_body(request, body)
+            logger.info(f"Incoming Request: {request.method} {request.url} - {request.headers} {request.body}")
+
+            response = await call_next(request)
+
+            # Log response details (optional)
+            process_time = time.time() - start_time
+            logger.info(f"Outgoing Response: {response.status_code} for {request.method} {request.url} - Processed in {process_time:.4f}s")
+            return response
         
 
 def create_app() -> FastAPI:
@@ -26,6 +51,9 @@ def create_app() -> FastAPI:
         redoc_url="/redoc"
     )
     
+    app.add_middleware(RequestLoggerMiddleware)
+
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
