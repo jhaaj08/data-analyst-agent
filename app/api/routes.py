@@ -1,8 +1,8 @@
 """
 Simple FastAPI route for parsing questions into data sources and questions lists
 """
-from fastapi import APIRouter, File, UploadFile
-from typing import Dict, Any, List
+from fastapi import APIRouter, File, Request, UploadFile
+from typing import Dict, Any, List,Optional
 from ..utils.s3_util import S3_Util
 import json
 import re
@@ -147,20 +147,31 @@ async def scrape_from_file(
 
 @router.post("/")
 async def analyze_complete_pipeline(
-    file: UploadFile = File(..., description="Question file (question.txt)")
+    request : Request
 ):
     """
     COMPLETE PIPELINE: Parse + Scrape + Answer Questions
     """
     try:
         print("🚀 STARTING COMPLETE ANALYSIS PIPELINE")
-        
+        form = await request.form()
+
+        optional_attachments = []
+        questions = None
+        for key, value in form.multi_items():
+            if key == "questions.txt":
+                questions = value
+            else:
+                optional_attachments.append(value)
+                
         # Step 1: Parse
-        question_content = await file.read()
+        question_content = await questions.read()
         question_text = question_content.decode('utf-8')
+        
         
         print(f"📝 STEP 1: Parsing...")
         parsed_data = await _parse_with_llm(question_text)
+        attachments = await get_attachment_dict(optional_attachments)
         data_sources = _extract_data_sources(parsed_data)
         questions = _extract_questions(parsed_data)
         applicable_sources = await _extract_applicable_sources(questions,data_sources)
@@ -170,7 +181,7 @@ async def analyze_complete_pipeline(
         scrape_results = []
         if data_sources:
             print(f"📡 STEP 2: Scraping...")
-            scrape_results = scrape_data_sources(applicable_sources)
+            scrape_results = scrape_data_sources(applicable_sources,attachments)
             print(f"✅ Scraped {len(scrape_results)} sources")
         
         # Step 3: Answer Questions
@@ -426,6 +437,12 @@ async def _extract_applicable_sources(questions : List[str],data_sources: List[s
     
 
 
+async def  get_attachment_dict(attachments : List[UploadFile]) -> Dict[str,bytes] :
+    ans = {}
+    for attachment in attachments:
+        ans[attachment.filename] = await attachment.read()
+    
+    return ans
 
 
 
