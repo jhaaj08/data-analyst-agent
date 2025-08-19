@@ -1,0 +1,6 @@
+Return a JSON object with keys:
+- `total_items`: number
+- `best_seller`: string
+
+1. How many items total?
+2. What's the best selling item?
