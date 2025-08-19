@@ -225,7 +225,7 @@ if len(numeric_cols) >= 2:
     
     img_base64 = base64.b64encode(img_data).decode()
     plt.close()
-    answer = f"data:image/png;base64,{{img_base64}}"
+    answer = img_base64  # Return just the base64 string, not the data URI
 else:
     answer = "Not enough numeric columns for scatterplot"
 """
@@ -278,14 +278,15 @@ DATASET INFO:
 RULES:
 1. Use 'df' for the DataFrame variable
 2. Store final answer in 'answer' variable
-3. For counting: answer = len(df[condition])
-4. For finding specific values: answer = "found_value" (as string)
-5. For statistics: answer = round(value, 2)  # Return numeric value only
-6. For visualizations: Create plot and save as base64 string in answer
-7. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
-8. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
-9. IMPORTANT: Convert results to appropriate types (str, int, float) before assigning to answer
-10. For finding maximum/minimum: Use .idxmax(), .idxmin(), or max()/min() with proper extraction
+3. For counting/numbers: answer = int(count_value)  # Return as integer
+4. For finding names/text: answer = "found_name"  # Return as string  
+5. For statistics/calculations: answer = round(float(value), 2)  # Return as float
+6. For paths/distances: answer = int(path_length)  # Return as integer
+7. For visualizations: Create plot and save as base64 string in answer
+8. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
+9. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
+10. IMPORTANT: Always convert to correct Python type (int, float, str) before assigning to answer
+11. For finding maximum/minimum: Use .idxmax(), .idxmin(), or max()/min() with proper extraction
 
 VISUALIZATION EXAMPLE:
 ```python
@@ -314,7 +315,7 @@ if len(img_data) > 102400:
 
 img_base64 = base64.b64encode(img_data).decode()
 plt.close()
-answer = f"data:image/png;base64,{{img_base64}}"
+answer = img_base64  # Return just the base64 string, not the data URI
 ```
 
 Generate ONLY Python code (no explanations):
