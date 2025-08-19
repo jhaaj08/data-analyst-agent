@@ -1,9 +1,7 @@
-Use the undirected network in `edges.csv`.
-Return a JSON object with keys:
-- `edge_count`: number
-- `highest_degree_node`: string
-- `average_degree`: number
-- `density`: number
-- `shortest_path_alice_eve`: number
-- `network_graph`: base64 PNG string under 100kB
-- `degree_histogram`: base64 PNG string under 100kB
+Analyze the sales data and answer:
+
+1. What is the correlation between sales and the day of month from the date column?
+2. What is the total sales across all regions?
+3. Which region has the highest average sales?
+
+Return answers as a JSON array.
