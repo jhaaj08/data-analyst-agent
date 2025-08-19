@@ -155,7 +155,8 @@ def answer_single_question_generic(llm_client, df, question, question_num):
             'float': float,
             'int': int,
             'sum': sum,
-            'round': round
+            'round': round,
+            'collections': __import__('collections')
         }
         
         # Try to add seaborn if available
@@ -167,6 +168,18 @@ def answer_single_question_generic(llm_client, df, question, question_num):
             print("   ⚠️  Seaborn not available")
         
         safe_locals = {}
+        
+        print(f"   🔧 Executing generated code:")
+        print(f"   {code}")
+        
+        exec(code, safe_globals, safe_locals)
+        answer = safe_locals.get('answer', 'No answer variable')
+        
+        print(f"   🔧 Executing generated code:")
+        print(f"   {code}")
+        
+        exec(code, safe_globals, safe_locals)
+        answer = safe_locals.get('answer', 'No answer variable')
         
         exec(code, safe_globals, safe_locals)
         answer = safe_locals.get('answer', 'No answer variable')
@@ -184,7 +197,7 @@ def answer_single_question_generic(llm_client, df, question, question_num):
         if "scatterplot" in question.lower() or "plot" in question.lower():
             print("   ⚠️  Visualization failed, trying simple matplotlib...")
             try:
-                # Simple fallback plot
+                # Simple fallback plot with size optimization
                 simple_plot_code = f"""
 import io
 import base64
@@ -197,11 +210,20 @@ if len(numeric_cols) >= 2:
     plt.ylabel(numeric_cols[1])
     plt.title('Scatterplot')
     
-    # Save to base64
+    # Save to base64 with size optimization
     buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+    plt.savefig(buffer, format='png', dpi=80, bbox_inches='tight', facecolor='white')
     buffer.seek(0)
-    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    img_data = buffer.getvalue()
+    
+    # Check size and optimize if needed (target under 100KB = 102400 bytes)
+    if len(img_data) > 102400:
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=60, bbox_inches='tight', facecolor='white')
+        buffer.seek(0)
+        img_data = buffer.getvalue()
+    
+    img_base64 = base64.b64encode(img_data).decode()
     plt.close()
     answer = f"data:image/png;base64,{{img_base64}}"
 else:
@@ -224,8 +246,8 @@ else:
         return {
             "question_number": question_num,
             "question": question,
-            "error": str(e),
-            "code": code,
+            "error": f"Code execution failed: {str(e)}",
+            "generated_code": code,
             "success": False
         }
 
@@ -257,28 +279,40 @@ RULES:
 1. Use 'df' for the DataFrame variable
 2. Store final answer in 'answer' variable
 3. For counting: answer = len(df[condition])
-4. For finding: answer = "found_value"
-5. For statistics: answer = f"Statistic: {{value:.2f}}"
+4. For finding specific values: answer = "found_value" (as string)
+5. For statistics: answer = round(value, 2)  # Return numeric value only
 6. For visualizations: Create plot and save as base64 string in answer
-7. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64
+7. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
+8. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
+9. IMPORTANT: Convert results to appropriate types (str, int, float) before assigning to answer
+10. For finding maximum/minimum: Use .idxmax(), .idxmin(), or max()/min() with proper extraction
 
 VISUALIZATION EXAMPLE:
 ```python
 # For plot questions:
 import io
 import base64
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 6))  # Smaller figure size for smaller file
 plt.scatter(df['x_col'], df['y_col'])
 # Add regression line if needed
 plt.title('Plot Title')
 plt.xlabel('X Label')
 plt.ylabel('Y Label')
 
-# Save to base64
+# Save to base64 with size optimization
 buffer = io.BytesIO()
-plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+plt.savefig(buffer, format='png', dpi=80, bbox_inches='tight', facecolor='white')
 buffer.seek(0)
-img_base64 = base64.b64encode(buffer.getvalue()).decode()
+img_data = buffer.getvalue()
+
+# Check size and optimize if needed (target under 100KB = 102400 bytes)
+if len(img_data) > 102400:
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', dpi=60, bbox_inches='tight', facecolor='white')
+    buffer.seek(0)
+    img_data = buffer.getvalue()
+
+img_base64 = base64.b64encode(img_data).decode()
 plt.close()
 answer = f"data:image/png;base64,{{img_base64}}"
 ```
@@ -347,13 +381,13 @@ def generic_fallback(dataframes, questions):
     for i, question in enumerate(questions, 1):
         # Very basic generic responses
         if "how many" in question.lower():
-            answer = f"Dataset has {len(df)} total rows"
+            answer = len(df)  # Return number, not descriptive string
         elif "what" in question.lower() and "average" in question.lower():
             numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
                 col = numeric_cols[0]
                 avg = df[col].mean()
-                answer = f"Average {col}: {avg:.2f}"
+                answer = round(avg, 2)  # Return number, not descriptive string
             else:
                 answer = "No numeric columns found for average"
         else:

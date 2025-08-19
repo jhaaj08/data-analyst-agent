@@ -1,1 +1,9 @@
-How many items are there? What is the total value?
+Use the undirected network in `edges.csv`.
+Return a JSON object with keys:
+- `edge_count`: number
+- `highest_degree_node`: string
+- `average_degree`: number
+- `density`: number
+- `shortest_path_alice_eve`: number
+- `network_graph`: base64 PNG string under 100kB
+- `degree_histogram`: base64 PNG string under 100kB

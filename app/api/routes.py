@@ -13,6 +13,7 @@ import uuid
 import datetime
 import pandas as pd
 import numpy as np
+import logging
 
 # Add root directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -188,6 +189,31 @@ def _detect_and_build_json_response(questions_text: str, raw_answers: list) -> d
     return json_response
 
 
+def log_evaluation_request(analysis_id: str, request_data: dict, questions_content: str = None, files_info: list = None):
+    """Log detailed evaluation request information to file"""
+    try:
+        log_entry = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "analysis_id": analysis_id,
+            "request_info": request_data,
+            "questions_content": questions_content,
+            "files_info": files_info
+        }
+        
+        # Ensure logs directory exists
+        os.makedirs("logs", exist_ok=True)
+        
+        # Write to log file
+        log_filename = f"logs/evaluation_requests_{datetime.datetime.now().strftime('%Y-%m-%d')}.jsonl"
+        with open(log_filename, "a", encoding='utf-8') as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            
+        print(f"📝 Logged request details to: {log_filename}")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to write log file: {e}")
+
+
 @router.post("/")
 async def analyze_complete_pipeline(request: Request):
     """
@@ -204,6 +230,19 @@ async def analyze_complete_pipeline(request: Request):
     - files: Dictionary grouping files by type
     - questions_text_length: Length of the questions content
     """
+    # ====== COMPREHENSIVE REQUEST LOGGING ======
+    request_timestamp = datetime.datetime.now().isoformat()
+    analysis_id = str(uuid.uuid4())
+    
+    print("\n" + "="*80)
+    print(f"🔍 EVALUATION REQUEST LOG - {request_timestamp}")
+    print(f"📋 Analysis ID: {analysis_id}")
+    print(f"🌐 Client IP: {request.client.host if request.client else 'Unknown'}")
+    print(f"🎯 Endpoint Hit: {request.url}")
+    print(f"📡 Method: {request.method}")
+    print(f"📋 Headers: {dict(request.headers)}")
+    print("="*80)
+    
     try:
         print("🚀 PHASE 2: Processing multipart form data with validation")
         
@@ -211,22 +250,40 @@ async def analyze_complete_pipeline(request: Request):
         form = await request.form()
         
         if not form:
+            print("❌ ERROR: No form data provided")
             return {
                 "success": False,
                 "error": "No form data provided"
             }
         
+        # ====== LOG ALL FORM FIELDS ======
+        print(f"\n📦 FORM DATA RECEIVED:")
+        print(f"   Total fields: {len(form.multi_items())}")
+        
+        for field_name, field_data in form.multi_items():
+            if hasattr(field_data, 'filename') and field_data.filename:
+                print(f"   📁 File: {field_name} = {field_data.filename} ({field_data.content_type})")
+            else:
+                print(f"   📝 Field: {field_name} = [non-file data]")
+        
         # Look for required questions.txt
         questions_file = None
         other_files = []
         
+        print(f"\n🔍 PROCESSING FILES:")
+        
         for field_name, file_data in form.multi_items():
             if field_name == "questions.txt":
                 questions_file = file_data
+                print(f"   ✅ Found questions.txt")
             elif hasattr(file_data, 'filename') and file_data.filename:
                 # Read file content to check size
                 file_content = await file_data.read()
                 file_size = len(file_content)
+                
+                print(f"   📁 Processing file: {file_data.filename}")
+                print(f"      - Size: {file_size} bytes")
+                print(f"      - Content-Type: {file_data.content_type}")
                 
                 # Validate file size
                 if file_size > settings.max_file_size:
@@ -267,7 +324,7 @@ async def analyze_complete_pipeline(request: Request):
             }
         
         # Generate unique analysis ID
-        analysis_id = str(uuid.uuid4())
+        # analysis_id = str(uuid.uuid4()) # This line is now redundant as analysis_id is generated above
         
         # Read and validate questions content
         try:
@@ -644,6 +701,18 @@ async def analyze_complete_pipeline(request: Request):
         # Try to detect and build JSON object response generically
         json_response = _detect_and_build_json_response(questions_text, raw_answers)
         
+        # Before returning the final response
+        print(f"\n📤 FINAL RESPONSE:")
+        print(f"   Format: {'JSON Object' if json_response is not None else 'Array'}")
+        if json_response is not None:
+            print(f"   Keys: {list(json_response.keys())}")
+            print(f"   Response: {json_response}")
+        else:
+            print(f"   Response: {raw_answers}")
+        
+        print("="*80 + "\n")
+        
+        # Return the response...
         if json_response is not None:
             print(f"📤 Returning JSON object format with keys: {list(json_response.keys())}")
             return json_response
