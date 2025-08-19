@@ -283,12 +283,9 @@ RULES:
 5. For statistics/calculations: answer = round(float(value), 4)  # Return as float
 6. For correlations: answer = round(float(correlation_value), 4)  # Return as float
 7. For visualizations: Create plot and save as base64 string in answer
-8. For DATE correlations: Choose appropriate date component based on context
-   - Consider day-of-month for periodic patterns, month for seasonal trends
-   - Use business logic to determine which date aspect is most meaningful
-9. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
-10. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
-11. IMPORTANT: Always convert to correct Python type (int, float, str) before assigning to answer
+8. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
+9. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
+10. IMPORTANT: Always convert to correct Python type (int, float, str) before assigning to answer
 
 VISUALIZATION EXAMPLE:
 ```python
@@ -296,11 +293,16 @@ VISUALIZATION EXAMPLE:
 import io
 import base64
 plt.figure(figsize=(8, 6))  # Smaller figure size for smaller file
+
+# Create your plot (scatter, line, bar, etc.)
 plt.scatter(df['x_col'], df['y_col'])
-# Add regression line if needed
-plt.title('Plot Title')
-plt.xlabel('X Label')
-plt.ylabel('Y Label')
+# or: plt.plot(df['x_col'], df['y_col'])
+# or: plt.bar(df['category'], df['values'])
+
+# Add labels and title
+plt.title('Chart Title')
+plt.xlabel('X Axis Label')
+plt.ylabel('Y Axis Label')
 
 # Save to base64 with size optimization
 buffer = io.BytesIO()
@@ -318,7 +320,6 @@ if len(img_data) > 102400:
 img_base64 = base64.b64encode(img_data).decode()
 plt.close()
 answer = img_base64  # Return just the base64 string, not the data URI
-```
 
 Generate ONLY Python code (no explanations):
 """
