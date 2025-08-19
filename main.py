@@ -86,6 +86,16 @@ async def root():
         "status": "active"
     }
 
+@app.post("/")  # Add this back to handle direct root calls
+async def root_post_endpoint(request: Request):
+    """
+    Root POST endpoint - handles calls to the base URL
+    Forwards to the main API logic to ensure compatibility
+    """
+    # Import here to avoid circular imports  
+    from app.api.routes import analyze_complete_pipeline
+    return await analyze_complete_pipeline(request)
+
 
 def main():
     """Main function to run the data analyst agent API"""
