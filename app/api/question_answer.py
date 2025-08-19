@@ -280,13 +280,15 @@ RULES:
 2. Store final answer in 'answer' variable
 3. For counting/numbers: answer = int(count_value)  # Return as integer
 4. For finding names/text: answer = "found_name"  # Return as string  
-5. For statistics/calculations: answer = round(float(value), 2)  # Return as float
-6. For paths/distances: answer = int(path_length)  # Return as integer
+5. For statistics/calculations: answer = round(float(value), 4)  # Return as float
+6. For correlations: answer = round(float(correlation_value), 4)  # Return as float
 7. For visualizations: Create plot and save as base64 string in answer
-8. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
-9. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
-10. IMPORTANT: Always convert to correct Python type (int, float, str) before assigning to answer
-11. For finding maximum/minimum: Use .idxmax(), .idxmin(), or max()/min() with proper extraction
+8. For DATE correlations: Choose appropriate date component based on context
+   - Consider day-of-month for periodic patterns, month for seasonal trends
+   - Use business logic to determine which date aspect is most meaningful
+9. Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns), io, base64, collections
+10. IMPORTANT: Use .iloc[0] or .item() to extract single values from pandas Series
+11. IMPORTANT: Always convert to correct Python type (int, float, str) before assigning to answer
 
 VISUALIZATION EXAMPLE:
 ```python
